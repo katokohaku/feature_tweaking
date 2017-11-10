@@ -7,10 +7,16 @@ require(foreach)
 require(dplyr)
 require(magrittr)
 
+# need to supply an explicit variable to use to compute the row number.
+filter(mtcars, row_number() == 1L)
+filter(mtcars, row_number() == n())
+filter(mtcars, between(row_number(), 5, n()))
+
+source("./R/utils.R")
 # functions ---------------------------------------------------------------
 
 
-# parse RF trees into the data.frame of (feature index, threshold)
+# parse a decision tree in rtandomForest into list of path as data.frame
 enumratePath.randomForest <- function(rf, k=1) {
   stopifnot(class(rf) == "randomForest")
   s
@@ -64,9 +70,6 @@ enumratePath.randomForest <- function(rf, k=1) {
     path = this.path))
 }
 
-chop <- function(X, n=1) {
-  ifelse(n < 0, tail(X, NROW(X) - n), head(X, NROW(X) - n)) 
-}
 
 # example run -------------------------------------------------------------
 
