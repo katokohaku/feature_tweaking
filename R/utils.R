@@ -19,16 +19,14 @@ catf <- function (..., file = "", append = FALSE, newline = TRUE)
 #' Remove the First or Last Part of an Object
 #' 
 #' @param X     a data.frame or a matrix 
-#' @param n     an integer. number of row to be removed from last. Same as \code{ head(X, NROW(X) - n)}. if n < 0, first n rows are removed. 
-#' @param ...   arguments to be passed to See \code{\link{head}} or See \code{\link{tail}}.
+#' @param n     an integer. number of row to be removed from last. Same as \code{ head(X, NROW(X) - n)}. 
 #'  
 #' @examples
 #' chop(iris, 140)
-#' chop(iris, -140)
 #' 
 #' @export
 
-chop <- function(X, n = 1, ...) {
-  ifelse(n < 0, tail(X, NROW(X) - n, ...), head(X, NROW(X) - n, ...)) 
+chop <- function(X, n = 1) {
+  head(X, NROW(X) - n)
 }
 

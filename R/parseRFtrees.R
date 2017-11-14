@@ -19,8 +19,8 @@ source("./R/utils.R")
 # parse a decision tree in rtandomForest into list of path as data.frame
 enumratePath.randomForest <- function(rf, k=1) {
   stopifnot(class(rf) == "randomForest")
-  s
-  uppressWarnings(
+  
+  suppressWarnings(
     tree.df <- getTree(rfobj = rf, k=k, labelVar = as.factor(rf$classes))
   )
   colnames(tree.df) <- c("left.daughter", "right.daughter", "split.var", 
@@ -65,13 +65,15 @@ enumratePath.randomForest <- function(rf, k=1) {
       if(this == 1){ break() }
     }
   }
-  return(list(
-    leaf = this.leaf,
-    path = this.path))
+  
+  obj <- list(leaf = this.leaf, path = this.path)
+  class(obj) <- c(class(obj), "enumratePath")
+  
+  return(obj)
 }
 
 
-# example run -------------------------------------------------------------
+# set up to run -------------------------------------------------------------
 
 data(spam, package = "kernlab")
 
@@ -81,6 +83,11 @@ dataset %>% str
 
 # "classification"
 X <- scale( dataset[, 1:(ncol(dataset)-1)] )
+scaled.center <- attr(X, "scaled:center")
+scaled.scale  <- attr(X, "scaled:scale")
+
+iris[1, ]; X[1,] * scaled.scale + scaled.center
+
 true.y <- dataset[, ncol(dataset)]
 
 ntree=100
@@ -90,18 +97,83 @@ pred.y <- predict(rf, newdata=X, predict.all=TRUE)
 
 
 # target samples are: pred.y == true.y ------------------------------------
-i =1#NROW(true.y) #  the number of instance
-true.y[i] ==  pred.y$aggregate[i]
-evaluated.trees <- which(true.y[i] ==  pred.y$individual[i, ])
+x <- X[target.instance, ]
+label.from = true.y[target.instance]
+label.to
+epsiron = 0.1
 
 
 
-# get all Path of a decision tree in randomForest -------------------------
+# get e-satisfactory instance of aim-leaf from all tree ---------------------
+try.trees <- which(label.from ==  pred.y$individual[target.instance, ])
 
-  paths.of.tree <- enumratePath.randomForest(rf,1)
-)
-paths.of.tree
+cand.eSatisfy <- list()
+for(i.tree in 1:NROW(try.trees)){ # trees to be re-evaluated
+  
+  enum.paths <- enumratePath.randomForest(rf, i.tree)
+  cand.paths <- enum.paths$path[which(enum.paths$leaf == label.to)]
+  
+  this.cands <- lapply(
+    cand.paths, 
+    function(obj) {
+      mutate(obj, 
+             eps = ifelse(lr=="<", -epsiron, +epsiron),
+             e.satisfy = ifelse(lr=="<", point-epsiron, point+epsiron))
+    }
+  )  
+  
+  cand.eSatisfy <- c(cand.eSatisfy, this.cands)
+}
+
+cand.eSatisfy
+
+
+# eval each path ----------------------------------------------------------
+
+
+e.satisfy.instance <- NA
+delta.min = 1e+99
+
+for(path in cand.eSatisfy){
+  this.tweak <- x
+  this.path  <- chop(path)
+  
+  for(ip in 1:NROW(this.path)){
+    feature <- as.character(this.path[ip, ]$split.var)
+    this.tweak[feature] <-this.path[ip, ]$e.satisfy
+  }
+  
+  delta <- 1/dist(rbind(x, this.tweak))
+  print(c(this.tweak, effort=delta))
+  if(delta < delta.min){
+    tweaked.instance <- this.tweak 
+    delta.min <- delta
+  }
+}
+pred.newpredict(rf, newdata=tweaked.instance)
+
+tweaked.unscaled <- tweaked.instance * scaled.scale + scaled.center
 
 
 
+
+
+# plot shift --------------------------------------------------------------
+original.instance - tweaked.instance
+plot(Petal.Length~Petal.Width, data=X, col=true.y)
+
+points(Petal.Length~Petal.Width, col="purple", pch=16, data=original.instance %>% t %>% data.frame)
+points(Petal.Length~Petal.Width, col="purple", pch=16, data=tweaked.instance %>% t %>% data.frame)
+
+arrows(x0 = original.instance[4], y0 = original.instance[3],
+       x1 = tweaked.instance[4], y1 =tweaked.instance[3])
+
+
+# iris[1,]
+# iris.unscaled <- t(X[target.instance,] * scaled.scale + scaled.center) %>% data.frame
+# iris.tweaked  <- t(tweaked.unscaled) %>% data.frame
+# 
+# points(x=iris.unscaled$Petal.Width, y=iris.unscaled$Petal.Length, col="purple", pch=16)
+# points(x=iris.tweaked$Petal.Width, y=iris.tweaked$Petal.Length, col="purple", pch=16)
+# 
 
