@@ -75,11 +75,16 @@ enumratePath.randomForest <- function(rf, k=1) {
 
 # set up to run -------------------------------------------------------------
 
-data(spam, package = "kernlab")
+# get dataset
+source("./R/generate_artificial_data.R")
+label.from <- "in"   ; label.to = "out"
 
-dataset <- iris; label.from <- "virginica"; label.to = "versicolor"; target.instance=140
+# dataset <- iris; label.from <- "virginica"; label.to = "versicolor"; target.instance=140
+
+# data(spam, package = "kernlab")
 # dataset <- spam; label.from <- "spam"   ; label.to = "nonspam"
 dataset %>% str
+head(dataset)
 
 # "classification"
 X <- scale( dataset[, 1:(ncol(dataset)-1)] )
@@ -91,83 +96,101 @@ iris[1, ]; X[1,] * scaled.scale + scaled.center
 true.y <- dataset[, ncol(dataset)]
 
 ntree=100
-rf <- randomForest(X, true.y, ntree=ntree, nodesize=5, maxnodes=16)
-# plot(rf)
-pred.y <- predict(rf, newdata=X, predict.all=TRUE)
+rf.all <- randomForest(X, true.y, ntree=ntree, nodesize=5, maxnodes=16)
+varImpPlot(rf.all) # to view varImp, x3 & x4 should be removed.
 
+X.fs <- X[,-c(3,4)]
+rf <- randomForest(X.fs, true.y, ntree=ntree, nodesize=5, maxnodes=16)
+
+# plot(rf)
+pred.y <- predict(rf, newdata=X.fs, predict.all=TRUE)
+varImpPlot(rf)
+
+
+plot(x1~x2, data=dataset, col=true.y)
 
 # target samples are: pred.y == true.y ------------------------------------
-x <- X[target.instance, ]
-label.from = true.y[target.instance]
-label.to
-epsiron = 0.1
+epsiron = 0.3
 
-
-
-# get e-satisfactory instance of aim-leaf from all tree ---------------------
-try.trees <- which(label.from ==  pred.y$individual[target.instance, ])
-
-cand.eSatisfy <- list()
-for(i.tree in 1:NROW(try.trees)){ # trees to be re-evaluated
+for(target.instance in 1:60){
   
-  enum.paths <- enumratePath.randomForest(rf, i.tree)
-  cand.paths <- enum.paths$path[which(enum.paths$leaf == label.to)]
+  dataset[target.instance,]
   
-  this.cands <- lapply(
-    cand.paths, 
-    function(obj) {
-      mutate(obj, 
-             eps = ifelse(lr=="<", -epsiron, +epsiron),
-             e.satisfy = ifelse(lr=="<", point-epsiron, point+epsiron))
+  x <- X.fs[target.instance, ]
+  label.from = true.y[target.instance]
+  label.to
+  
+  str(rf)
+  
+  # get e-satisfactory instance of aim-leaf from all tree ---------------------
+  try.trees <- which(label.from ==  pred.y$individual[target.instance, ])
+  
+  cand.eSatisfy <- list()
+  for(i.tree in 1:NROW(try.trees)){ # trees to be re-evaluated
+    
+    enum.paths <- enumratePath.randomForest(rf, i.tree)
+    cand.paths <- enum.paths$path[which(enum.paths$leaf == label.to)]
+    
+    this.cands <- lapply(
+      cand.paths, 
+      function(obj) {
+        mutate(obj, 
+               eps = ifelse(lr=="<", -epsiron, +epsiron),
+               e.satisfy = ifelse(lr=="<", point-epsiron, point+epsiron))
+      }
+    )  
+    
+    cand.eSatisfy <- c(cand.eSatisfy, this.cands)
+  }
+  
+  cand.eSatisfy %>% str(0)
+  
+  
+  # eval each path ----------------------------------------------------------
+  
+  e.satisfy.instance <- NA
+  delta.min = 1e+99
+  
+  for(path in cand.eSatisfy){
+    this.tweak <- x
+    this.path  <- chop(path)
+    
+    for(ip in 1:NROW(this.path)){
+      feature <- as.character(this.path[ip, ]$split.var)
+      this.tweak[feature] <-this.path[ip, ]$e.satisfy
     }
-  )  
-  
-  cand.eSatisfy <- c(cand.eSatisfy, this.cands)
-}
-
-cand.eSatisfy
-
-
-# eval each path ----------------------------------------------------------
-
-
-e.satisfy.instance <- NA
-delta.min = 1e+99
-
-for(path in cand.eSatisfy){
-  this.tweak <- x
-  this.path  <- chop(path)
-  
-  for(ip in 1:NROW(this.path)){
-    feature <- as.character(this.path[ip, ]$split.var)
-    this.tweak[feature] <-this.path[ip, ]$e.satisfy
+    
+    delta <- dist(rbind(x, this.tweak)) # if euclidean distance
+    # delta <- 
+    # print(c(this.tweak, effort=delta))
+    if(delta < delta.min){
+      if(predict(rf, newdata=this.tweak) == label.to){
+        
+        tweaked.instance <- this.tweak 
+        delta.min <- delta
+      }
+    }
   }
   
-  delta <- 1/dist(rbind(x, this.tweak))
-  print(c(this.tweak, effort=delta))
-  if(delta < delta.min){
-    tweaked.instance <- this.tweak 
-    delta.min <- delta
-  }
+  pred.new <- predict(rf, newdata=tweaked.instance)
+  pred.new == label.to
+  original.instance <- dataset[target.instance,1:2]
+  
+  tweaked.unscaled <- tweaked.instance * scaled.scale[1:2] + scaled.center[1:2]
+  
+  
+  
+  # plot shift --------------------------------------------------------------
+  original.instance - tweaked.unscaled
+  original.instance %>% str
+  points(x1~x2, col="purple", pch=16, data=original.instance)
+  points(x1~x2, col="green", pch=16, data=tweaked.unscaled %>% t %>% data.frame)
+  
+  segments(x0 = original.instance$x2, y0 = original.instance$x1,
+           x1 = tweaked.unscaled[2], y1 =tweaked.unscaled[1])
 }
-pred.newpredict(rf, newdata=tweaked.instance)
-
-tweaked.unscaled <- tweaked.instance * scaled.scale + scaled.center
-
-
-
-
-
-# plot shift --------------------------------------------------------------
-original.instance - tweaked.instance
-plot(Petal.Length~Petal.Width, data=X, col=true.y)
-
-points(Petal.Length~Petal.Width, col="purple", pch=16, data=original.instance %>% t %>% data.frame)
-points(Petal.Length~Petal.Width, col="purple", pch=16, data=tweaked.instance %>% t %>% data.frame)
-
-arrows(x0 = original.instance[4], y0 = original.instance[3],
-       x1 = tweaked.instance[4], y1 =tweaked.instance[3])
-
+legend("topleft", legend = c("original", "teaked"),
+       pch = 16,     col = c("purple", "green"))
 
 # iris[1,]
 # iris.unscaled <- t(X[target.instance,] * scaled.scale + scaled.center) %>% data.frame
