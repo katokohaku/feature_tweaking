@@ -1,5 +1,3 @@
-# 
-
 rm(list=ls())
 # set.seed(777)
 require(randomForest)
