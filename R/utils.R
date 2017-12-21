@@ -27,7 +27,11 @@ catf <- function (..., file = "", append = FALSE, newline = TRUE)
 #' @export
 
 chop <- function(X, n = 1) {
-  head(X, NROW(X) - n)
+  if(n > 0) { 
+    head(X, NROW(X) - n)
+  } else {
+    tail(X, NROW(X) - abs(n))
+  }
 }
 
 
@@ -72,6 +76,4 @@ rescale <- function(X, scaled.X){
                 c=attr(scaled.X, "scaled:center")), 
            function(a, b, c){ a * b + c })
 }
-iris.scaled <- scale(iris[, -5])
-rescale(head(iris.scaled), iris.scaled)
-head(iris)
+
