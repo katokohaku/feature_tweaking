@@ -16,7 +16,7 @@ catf <- function (..., file = "", append = FALSE, newline = TRUE)
 }
 
 
-#' Remove the First or Last Part of an Object
+#' Remove the First or Last n of an Object
 #' 
 #' @param X     a data.frame or a matrix 
 #' @param n     an integer. number of row to be removed from last. Same as \code{ head(X, NROW(X) - n)}. 
@@ -30,3 +30,48 @@ chop <- function(X, n = 1) {
   head(X, NROW(X) - n)
 }
 
+
+#' Scale a matrix with parameters of a scaled matix
+#' @details  X is scaled by \code{center = attr(scaled.X, "scaled:center")} and \code{scale = attr(scaled.X, "scaled:scale")}
+#' 
+#' @param X         a matrixa or a data.frame to be scaled
+#' @param scaled.X  a scaled matrixa or a scaled data.frame
+#' 
+#' @return          a tibble
+#' 
+#' @examples
+#' iris.scaled <- scale(iris[1:100,-5])
+#' 
+#' 
+#' @export
+
+scale_by <- function(X, scaled.X){
+  stopifnot(NCOL(X) == NCOL(scaled.X))
+  scale(X,
+        center = attr(scaled.X, "scaled:center"),
+        scale = attr(scaled.X, "scaled:scale"))
+}
+
+#' Restore a scaled matrix to a matrix with original parameters.
+#' 
+#' @param X         a matrixa or a data.frame to be restored
+#' @param scaled.X  a scaled matrixa or a scaled data.frame
+#'  
+#' @return          a tibble
+#' @examples
+#' iris.scaled <- scale(iris[, -5])
+#' rescale(head(iris.scaled), iris.scaled)
+#' head(iris)
+#' @export
+
+rescale <- function(X, scaled.X){
+  stopifnot(NCOL(X) == NCOL(scaled.X))
+  
+  pmap_df( list(a=as_data_frame(X), 
+                b=attr(scaled.X, "scaled:scale"), 
+                c=attr(scaled.X, "scaled:center")), 
+           function(a, b, c){ a * b + c })
+}
+iris.scaled <- scale(iris[, -5])
+rescale(head(iris.scaled), iris.scaled)
+head(iris)
