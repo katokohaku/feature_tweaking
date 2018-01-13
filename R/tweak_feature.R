@@ -58,9 +58,89 @@ tweak <- function(
       return(tweaked.instance)
     }
   )
-  Sys.time() - start.time
-  all.tweak <- list(original = newdata, suggest = tweak,
-                    diff = data.frame(tweak - newdata))
+  print(Sys.time() - start.time)
+  all.tweak <- list(predict = pred.y$aggregate, original = newdata, suggest = tweak)
   class(all.tweak) <- "tweaked.suggestion"
   return(all.tweak)
 }
+
+
+# Restore tweaked instances to the original scale
+
+descale.tweakedFeature <- function(tweaked.X, scaled.X){
+  stopifnot(class(tweaked.X) == "tweaked.suggestion", !missing(scaled.X))
+  original <- descale(tweaked.X$original, scaled.X)
+  suggest <- descale(tweaked.X$suggest, scaled.X)
+  
+  return(list(original = original, suggest = suggest,
+              diff = as.tibble(suggest - original)) )
+}
+
+# Plot statistics of tweaked instances (population)
+plot.tweakedPopulation <- function(
+  tweaked.X, type = c( "absoluteSum", "direction", "frequency")) {
+  stopifnot(class(tweaked.X) == "tweaked.suggestion")
+  type <- match.arg(type)
+  
+  tw.diff <- data.frame(tweaked.X$suggest - tweaked.X$original)
+  pos <- which(rowSums(abs(tw.diff)) > 0)
+  if(length(pos) > 0){
+    tw.diff <-   tw.diff[pos, ]
+  }
+  
+  stats <- data.frame(var=colnames(tw.diff), value=colMeans(abs(tw.diff))) 
+  p <- stats %>% 
+    ggplot(aes(x=reorder(var, value), y=value)) +
+    geom_bar(stat = "identity") +
+    xlab("") + ylab("mean absolute effort") +
+    coord_flip()
+  
+  if(type == "direction"){
+    stats <- tw.diff  
+    p <- tw.diff %>% gather() %>% 
+      mutate(var = as.factor(key)) %>% 
+      ggplot(aes(x=var, y=value)) +
+      geom_hline(yintercept=0, colour = "red", size = 1.5) + 
+      geom_boxplot() +
+      xlab("") + ylab("All direction of tweak") +
+      coord_flip()
+  }
+  
+  if(type == "frequency"){
+    stats <- data.frame(var=colnames(tw.diff), nonZero=colMeans(tw.diff != 0)) 
+    p <- stats %>% 
+      ggplot(aes(x=reorder(var, nonZero), y=nonZero)) +
+      geom_bar(stat = "identity") +
+      xlab("") + ylab("non-zerp frequency of feature tweaking") + 
+      coord_flip()
+  }
+  
+  print(p)
+  rownames(stats) <- NULL
+  invisible(list(stats = stats, plot = p))
+}
+
+# Plot individual suggestion (direction to modify)
+plot.suggest <- function(tweaked.X, k = 1, .order = FALSE, .nonzero.only = FALSE){
+  stopifnot(class(tweaked.X) == "tweaked.suggestion")
+  tw.diff <- data.frame(tweaked.X$suggest - tweaked.X$original)
+  
+  instance <- tw.diff[k, ] %>% gather
+  if(.nonzero.only){
+    instance %<>% filter(abs(value) > 0)
+  }
+  p <- ggplot(instance, aes(x=key, y=value))
+  if(.order) {
+    p <- ggplot(instance, aes(x=reorder(key, abs(value)), y=value))
+  }
+  p <- p +
+    geom_hline(yintercept=0, colour = "red", size = 1.5) + 
+    geom_bar(stat = "identity")  +
+    xlab("") + ylab("directions of tweak") +
+    coord_flip()
+  
+  print(p)
+  invisible(p)
+}
+
+# end ---------------------------------------------------------------------

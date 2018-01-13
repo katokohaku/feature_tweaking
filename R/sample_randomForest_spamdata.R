@@ -1,5 +1,5 @@
 # feature tweaking: sample usage with spam data set -----------------------
-for(LIB in c("randomForest", "dplyr", "magrittr", "purrr", "tibble")){
+for(LIB in c("randomForest", "tidyverse", "magrittr")){
   if(! require(LIB, character.only = TRUE)){
     install.packages(LIB, dependencies = TRUE)
     require(LIB, character.only = TRUE)
@@ -73,52 +73,18 @@ tweaked <- tweak(es.rf, newdata= X.fs[1:30, ], label.from = "spam", label.to = "
                  .dopar = TRUE)
 tweaked %>% str
 
+dt <- descale.tweakedFeature(tweaked, X.fs)
 
-# post analysis -----------------------------------------------------------
-require(tidyr)
-require(ggplot2)
-tw.diff <- tweaked$diff
-tw.diff %>% gather() %>% 
-  mutate(var = as.array(key)) %>% 
-  ggplot(aes(x=var, y=value)) +
-  geom_hline(yintercept=0, colour = "red", size = 1.5) + 
-  geom_boxplot() +
-  coord_flip()
-  
-data.frame(var=colnames(tw.diff), nonZero=colMeans(tw.diff != 0)) %>% 
-  ggplot(aes(x=reorder(var, nonZero), y=nonZero)) +
-  geom_bar(stat = "identity") +
-  coord_flip() +
-  xlab("") + ylab("non-zerp frequency")
+# Plot population 
+pp <- plot.tweakedPopulation(tweaked, "a")
+pp <- plot.tweakedPopulation(tweaked, "d")
+pp <- plot.tweakedPopulation(tweaked, "f")
 
-data.frame(var=colnames(tw.diff), value=colMeans(abs(tw.diff))) %>% 
-  ggplot(aes(x=reorder(var, value), y=value)) +
-  geom_bar(stat = "identity") +
-  xlab("") + ylab("mean absolute effort") +
-  coord_flip()
-  
-which(rowSums(abs(tw.diff)) >0) %>% length
-(ins.df <- tw.diff[6, ])
-ins.df %>% gather() %>% 
-  # filter(abs(value) > 0) %>% 
-  # ggplot(aes(x=reorder(key, abs(value)), y=value)) +
-  ggplot(aes(x=key, y=value)) +
-  geom_bar(stat = "identity")  +
-  xlab("") + ylab("amount of effort") +
-  coord_flip()
-  
+which(tweaked$predict == "spam")
+plot.suggest(tweaked, 3)
+plot.suggest(tweaked, 6)
+plot.suggest(tweaked, 7)
+plot.suggest(tweaked, 7, .order = TRUE, .nonzero.only = TRUE)
 
-# 
-# 
-# 
-# 
-# 
-# dataset.train.fs[target.instance,]
-# X.fs[target.instance,]
-# 
-# X.fs %>% str(1)
-# descale(X.fs, X.fs)[target.instance, 1:6]
-# dataset.train.fs[target.instance, 1:6]
-# 
 
 # end ---------------------------------------------------------------------
