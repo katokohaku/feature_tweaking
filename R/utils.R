@@ -49,7 +49,7 @@ chop <- function(X, n = 1) {
 #' 
 #' @export
 
-scale_by <- function(X, scaled.X){
+rescale <- function(X, scaled.X){
   stopifnot(NCOL(X) == NCOL(scaled.X))
   scale(X,
         center = attr(scaled.X, "scaled:center"),
@@ -64,11 +64,11 @@ scale_by <- function(X, scaled.X){
 #' @return          a tibble
 #' @examples
 #' iris.scaled <- scale(iris[, -5])
-#' rescale(head(iris.scaled), iris.scaled)
+#' descale(head(iris.scaled), iris.scaled)
 #' head(iris)
 #' @export
 
-rescale <- function(X, scaled.X){
+descale <- function(X, scaled.X){
   stopifnot(NCOL(X) == NCOL(scaled.X))
   
   pmap_df( list(a=as_data_frame(X), 
