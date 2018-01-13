@@ -15,6 +15,13 @@ catf <- function (..., file = "", append = FALSE, newline = TRUE)
   invisible(msg)
 }
 
+#' Do nothing with any arguments 
+#' 
+#' @param ... everything
+#'  
+#' @export
+
+do.nothing <- function(...){}
 
 #' Remove the First or Last n of an Object
 #' 
@@ -33,8 +40,6 @@ chop <- function(X, n = 1) {
     tail(X, NROW(X) - abs(n))
   }
 }
-
-
 #' Scale a matrix with parameters of a scaled matix
 #' @details  X is scaled by \code{center = attr(scaled.X, "scaled:center")} and \code{scale = attr(scaled.X, "scaled:scale")}
 #' 

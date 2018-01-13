@@ -1,30 +1,33 @@
+# feature tweaking: sample usage with spam data set -----------------------
+for(LIB in c("randomForest", "dplyr", "magrittr", "purrr", "tibble")){
+  if(! require(LIB, character.only = TRUE)){
+    install.packages(LIB, dependencies = TRUE)
+    require(LIB, character.only = TRUE)
+  }
+}
+if(! require(pforeach)){ 
+  install.packages("foreach", dependencies = TRUE)
+  devtools::install_github("hoxo-m/pforeach")
+  require(pforeach)
+}
+
 rm(list=ls())
 set.seed(777)
-
-require(randomForest)
-require(foreach)
-require(dplyr)
-require(magrittr)
-require(purrr)
-# devtools::install_github("hoxo-m/pforeach")
-require(pforeach)
 source("./R/utils.R")
 
 # set up to run -------------------------------------------------------------
-
-# get dataset
-
-# dataset <- iris; label.from <- "virginica"; label.to = "versicolor"; target.instance=140
-
 data(spam, package = "kernlab")
 dataset <- sample_frac(spam)
+n.test <- floor(NROW(dataset) *0.1)
 
-dataset %>% dim
-head(dataset)
+dataset.train <- chop(dataset, n.test)
+dataset.test  <- tail(dataset, n.test)
+
+dim(dataset);dim(dataset.train);dim(dataset.test)
 
 # classification with randomForest -----------------------------------------
-X <- dataset[, 1:(ncol(dataset)-1)]
-true.y <- dataset[, ncol(dataset)]
+X <- dataset.train[, 1:(ncol(dataset.train)-1)]
+true.y <- dataset.train[, ncol(dataset.train)]
 
 forest.all <- randomForest(X, true.y, ntree=500)
 forest.all
@@ -40,108 +43,82 @@ top.importance <- forest.all$importance %>% data.frame %>%
   head(12)
 
 # scaling feature-selected data  ---------------------------
-dataset.fs<- dataset %>% select(top.importance$var)
+dataset.train.fs<- dataset.train %>% select(top.importance$var)
+dataset.train.fs<- dataset.train %>% select(top.importance$var)
 
-X.fs <- scale( dataset.fs )
+X.fs <- scale( dataset.train.fs )
 head(X.fs)[, 1:6]
-rescale( head(dataset.fs), X.fs )[, 1:6]
+rescale( head(dataset.train.fs), X.fs )[, 1:6]
 
-descale(head(X.fs), X.fs)[,1:6]
-head(dataset.fs)[,1:6]
-
-X.fs <- X %>% data.frame %>% select(top.importance$var)
 forest.rf <- randomForest(X.fs, true.y, ntree=100)
 forest.all
 forest.rf
 plot(forest.rf)
 
 
-# functions ---------------------------------------------------------------
+# feature tweaking  ---------------------------------------------------------------
 source("./R/parseRFrees.R")
+
+# test sampling (for demo)
 system.time(ep <- getRules.randomForest(forest.rf, k=2, label.to = NULL)); ep %>% str(2)
 
-NTREE=30
-gr <- set.eSatisfactory.rf(forest.rf, ntree = NTREE, epsiron = 0.3)
-gr %>% str(1)
-gr[[20]]$nonspam[[167]]
+es.rf <- set.eSatisfactory.rf(forest.rf, ntree = 30, epsiron = 0.3)
+es.rf %>% str(2)
+
 
 # eval predicted instance -------------------------------------------------
-pred.y <- predict(forest.rf, newdata=X.fs, predict.all=TRUE)
-label.from = "spam"
-label.to = "nonspam"
-forest = forest.rf
+source("./R/tweak_feature.R")
 
-pred.y$individual %>% dim
+tweaked <- tweak(es.rf, newdata= X.fs[1:30, ], label.from = "spam", label.to = "nonspam",
+                 .dopar = TRUE)
+tweaked %>% str
 
-tree.predict <- pred.y$individual[, 1:NTREE]
-which(! map_lgl(tree.predict, function(x) all(x == "spam"))) %>% head
 
-target.instance = 21
-this.instance <- X.fs[target.instance, ]
-
-true.y[target.instance]
-pred.y$aggregate[target.instance]
-
-tree.predict[target.instance, ]
-
-tree.pred.from <- which(tree.predict[target.instance, ]  == label.from )
-catf("instance[%i]: %i of %i trees predicted: \"%s\" (wants -> \"%s\")", target.instance,
-     length(tree.pred.from),  length(pred.y$individual[target.instance,  1:NTREE]), 
-     label.from, label.to)
-
-i.tree = tree.pred.from[1]
-cand.eSatisfy <- npforeach(i.tree = tree.pred.from)(gr[[i.tree]][[label.to]] )
-str(cand.eSatisfy, 0)
-
-catf("evalutate %i candidates", length(cand.eSatisfy))
-tweaked.instance <- NA
-delta.min <- 1e+99
-
-for(this.path in cand.eSatisfy){
+# post analysis -----------------------------------------------------------
+require(tidyr)
+require(ggplot2)
+tw.diff <- tweaked$diff
+tw.diff %>% gather() %>% 
+  mutate(var = as.array(key)) %>% 
+  ggplot(aes(x=var, y=value)) +
+  geom_hline(yintercept=0, colour = "red", size = 1.5) + 
+  geom_boxplot() +
+  coord_flip()
   
-  this.tweak <- this.instance
-  for(ip in 1:NROW(this.path)){
-    feature <- as.character(this.path[ip, ]$split.var)
-    this.tweak[feature] <- this.path[ip, ]$e.satisfy
-  }
-  delta <- dist(rbind(this.instance, this.tweak))
+data.frame(var=colnames(tw.diff), nonZero=colMeans(tw.diff != 0)) %>% 
+  ggplot(aes(x=reorder(var, nonZero), y=nonZero)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  xlab("") + ylab("non-zerp frequency")
+
+data.frame(var=colnames(tw.diff), value=colMeans(abs(tw.diff))) %>% 
+  ggplot(aes(x=reorder(var, value), y=value)) +
+  geom_bar(stat = "identity") +
+  xlab("") + ylab("mean absolute effort") +
+  coord_flip()
   
-  if(delta < delta.min){
-    if(predict(forest, newdata=this.tweak) == label.to){
-      
-      tweaked.instance <- rbind(
-        instance = this.instance,
-        tweaked  = this.tweak, 
-        diff     = this.instance - this.tweak) %>% t
-      
-      delta.min <- delta
-    }
-  }
-}
-tweaked.instance; delta.min
-dataset.fs[21,]
-X.fs[21,]
+which(rowSums(abs(tw.diff)) >0) %>% length
+(ins.df <- tw.diff[6, ])
+ins.df %>% gather() %>% 
+  # filter(abs(value) > 0) %>% 
+  # ggplot(aes(x=reorder(key, abs(value)), y=value)) +
+  ggplot(aes(x=key, y=value)) +
+  geom_bar(stat = "identity")  +
+  xlab("") + ylab("amount of effort") +
+  coord_flip()
+  
 
-
-
-
-# plot shift --------------------------------------------------------------
-original.instance - tweaked.unscaled
-original.instance %>% str
-points(x1~x2, col="purple", pch=16, data=original.instance)
-points(x1~x2, col="green", pch=16, data=tweaked.unscaled %>% t %>% data.frame)
-
-segments(x0 = original.instance$x2, y0 = original.instance$x1,
-         x1 = tweaked.unscaled[2], y1 =tweaked.unscaled[1])
-}
-legend("topright", legend = c("original", "teaked"),
-       pch = 16,     col = c("purple", "green"))
-
-# iris[1,]
-# iris.unscaled <- t(X[target.instance,] * scaled.scale + scaled.center) %>% data.frame
-# iris.tweaked  <- t(tweaked.unscaled) %>% data.frame
 # 
-# points(x=iris.unscaled$Petal.Width, y=iris.unscaled$Petal.Length, col="purple", pch=16)
-# points(x=iris.tweaked$Petal.Width, y=iris.tweaked$Petal.Length, col="purple", pch=16)
+# 
+# 
+# 
+# 
+# dataset.train.fs[target.instance,]
+# X.fs[target.instance,]
+# 
+# X.fs %>% str(1)
+# descale(X.fs, X.fs)[target.instance, 1:6]
+# dataset.train.fs[target.instance, 1:6]
 # 
 
+# end ---------------------------------------------------------------------

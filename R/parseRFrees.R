@@ -1,6 +1,3 @@
-
-# functions ---------------------------------------------------------------
-
 # parse a decision tree in randomForest into list of path as data.frame
 getRules.randomForest <- function(forest, k=1, label.to=NULL) {
   stopifnot(class(forest) == "randomForest")
@@ -58,7 +55,7 @@ getRules.randomForest <- function(forest, k=1, label.to=NULL) {
       ]] <- i.path$path
   }
   
-  class(path.by.class) <- c(class(path.by.class), "decisionTree.rulePath")
+  class(path.by.class) <- "decisionTree.rulePath"
   return(path.by.class)
 }
 # system.time(ep <- getRules.randomForest(forest, k=2, label.to = NULL)); ep %>% str(2)
@@ -66,28 +63,13 @@ getRules.randomForest <- function(forest, k=1, label.to=NULL) {
 
 
 
-# get e-satisfactory instance of aim-leaf from all tree ---------------------
-
-
-# extract all rules a decision tree in rtandomForest into list of path as data.frame
-
+# get e-satisfactory instance of aim-leaf from all tree
 set.eSatisfactory.rf <- function(forest, ntree=NULL, epsiron = 0.1) {
-  stopifnot(!missing(forest), epsiron > 0)
-  all.trees <- NULL
+  stopifnot(class(forest)== "randomForest", epsiron > 0)
 
-  if(class(forest) != "randomForest"){ stop() }
-
-  maxk <- if(is.null(ntree)){ forest$ntree } else { ntree }
-  class.label <- if(is.null(label.to)){
-    as.character(forest$classes)
-  } else {
-    if(label.to %in% as.character(forest$classes)){
-      label.to
-    } else {
-      stop("unexpected input in label.to")
-    }
-  }
+  maxk <- ntree
   if(is.null(ntree)){
+    maxk <- forest$ntree
     catf("extracting all (%i of %i trees)", maxk, forest$ntree)
   } else {
     catf("extracting head(%i) of %i trees", maxk, forest$ntree)
@@ -118,8 +100,9 @@ set.eSatisfactory.rf <- function(forest, ntree=NULL, epsiron = 0.1) {
   })
   print(Sys.time() - start.time)
   
-  class(all.eTrees) <- c(class(all.eTrees), "decisionTree.eSatisfactoryRules")
-  invisible(all.eTrees)
+  esforest <- list(forest = forest, trees = all.eTrees)
+  class(esforest) <- "forest.eSatisfactoryRules"
+  invisible(esforest)
 }
 
 # gr <- getRules.eSatisfy.rf(forest, ntree = 20, epsiron = 0.3)
