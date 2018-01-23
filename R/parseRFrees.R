@@ -63,52 +63,5 @@ getRules.randomForest <- function(forest, k=1, label.to=NULL) {
 
 
 
-# get e-satisfactory instance of aim-leaf from all tree
-set.eSatisfactory.rf <- function(forest, ntree=NULL, epsiron = 0.1) {
-  stopifnot(class(forest)== "randomForest", epsiron > 0)
-
-  maxk <- ntree
-  if(is.null(ntree)){
-    maxk <- forest$ntree
-    catf("extracting all (%i of %i trees)", maxk, forest$ntree)
-  } else {
-    catf("extracting head(%i) of %i trees", maxk, forest$ntree)
-  }
-
-  start.time <- Sys.time()
-  all.trees <- pforeach(k = 1:maxk, .c=list)({
-    getRules.randomForest(forest, k=k)
-  })
-  print(Sys.time() - start.time)
-
-  catf("set e-satisfactory instance (%i trees)", length(all.trees))
-  start.time <- Sys.time()
-  all.eTrees <- pforeach(tree.rules = all.trees, .c=list)({
-    tree.eRules <- NULL
-    for(cn in names(tree.rules)){
-      tree.eRules[[cn]] <- map(
-        tree.rules[[cn]]$path,
-        function(obj){ 
-          mutate(obj,
-                 eps = ifelse(lr=="<", -epsiron, +epsiron),
-                 e.satisfy = point + eps) %>% 
-            select(-node, -path.to)
-        }
-      )
-    }
-    return(tree.eRules)
-  })
-  print(Sys.time() - start.time)
-  
-  esforest <- list(forest = forest, trees = all.eTrees)
-  class(esforest) <- "forest.eSatisfactoryRules"
-  invisible(esforest)
-}
-
-# gr <- getRules.eSatisfy.rf(forest, ntree = 20, epsiron = 0.3)
-# gr %>% str(2)
-
-
-
 
 

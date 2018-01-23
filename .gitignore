@@ -3,5 +3,9 @@
 .RData
 .Ruserdata
 ref
+<<<<<<< HEAD
 doc/*
+=======
+doc
+>>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
 *.png

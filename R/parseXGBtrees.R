@@ -41,7 +41,7 @@ data.frame(Feature=1:NCOL(X),Name=colnames(X)) %>%
 # xgb.plot.tree(model = bst)
 
 bst %>% str
-(dt <- xgb.model.dt.tree(colnames(X), bst))
+(dt <- xgb.model.dt.tree(feature_names = colnames(X), bst))
 
 dmp <- data.frame(x = xgb.dump(bst, with_stats = FALSE), booster=NA) 
 cn =NULL
@@ -72,9 +72,11 @@ z <-ldmp[[NNN + 1]] %>%
   select(Node, Feature, Split, left, right, Leaf, rule, everything()) %>% 
   rename(left.daughter = left, right.daughter=right, split.var=Feature, 
          split.point=Split, leaf=Leaf)
-z
+str(z)
+head(data.frame(z) ,10)
 
-
+p <- sort(as.numeric(z$leaf))
+plot(p)
 
 ldmp[[NNN + 1]][1,] %>% str
 
