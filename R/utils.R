@@ -41,12 +41,12 @@ chop <- function(X, n = 1) {
   }
 }
 #' Scale a matrix with parameters of a scaled matix
-#' @details  X is scaled by \code{center = attr(scaled.X, "scaled:center")} and \code{scale = attr(scaled.X, "scaled:scale")}
+#' @details  X is scaled by \code{center = attr(scaled, "scaled:center")} and \code{scale = attr(scaled, "scaled:scale")}
 #' 
-#' @param X         a matrixa or a data.frame to be scaled
-#' @param scaled.X  a scaled matrixa or a scaled data.frame
+#' @param X       a matrixa or a data.frame to be scaled
+#' @param scaled  a scaled matrixa or a scaled data.frame
 #' 
-#' @return          a tibble
+#' @return        a tibble
 #' 
 #' @examples
 #' iris.scaled <- scale(iris[1:100,-5])
@@ -54,17 +54,17 @@ chop <- function(X, n = 1) {
 #' 
 #' @export
 
-rescale <- function(X, scaled.X){
-  stopifnot(NCOL(X) == NCOL(scaled.X))
+rescale <- function(X, scaled){
+  stopifnot(NCOL(X) == NCOL(scaled))
   scale(X,
-        center = attr(scaled.X, "scaled:center"),
-        scale = attr(scaled.X, "scaled:scale"))
+        center = attr(scaled, "scaled:center"),
+        scale  = attr(scaled, "scaled:scale"))
 }
 
 #' Restore a scaled matrix to a matrix with original parameters.
 #' 
 #' @param X         a matrixa or a data.frame to be restored
-#' @param scaled.X  a scaled matrixa or a scaled data.frame
+#' @param scaled  a scaled matrixa or a scaled data.frame
 #'  
 #' @return          a tibble
 #' @examples
@@ -73,12 +73,12 @@ rescale <- function(X, scaled.X){
 #' head(iris)
 #' @export
 
-descale <- function(X, scaled.X){
-  stopifnot(NCOL(X) == NCOL(scaled.X))
+descale <- function(X, scaled){
+  stopifnot(NCOL(X) == NCOL(scaled))
   
   pmap_df( list(a=as_data_frame(X), 
-                b=attr(scaled.X, "scaled:scale"), 
-                c=attr(scaled.X, "scaled:center")), 
+                b=attr(scaled, "scaled:scale"), 
+                c=attr(scaled, "scaled:center")), 
            function(a, b, c){ a * b + c })
 }
 
