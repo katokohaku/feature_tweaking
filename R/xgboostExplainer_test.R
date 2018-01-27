@@ -1,0 +1,34 @@
+devtools::install_github("AppliedDataSciencePartners/xgboostExplainer")
+library(xgboost)
+library(xgboostExplainer)
+
+set.seed(123)
+
+data(agaricus.train, package='xgboost')
+
+X = as.matrix(agaricus.train$data)
+y = agaricus.train$label
+
+train_idx = 1:5000
+
+train.data = X[train_idx,]
+test.data = X[-train_idx,]
+
+xgb.train.data <- xgb.DMatrix(train.data, label = y[train_idx])
+xgb.test.data <- xgb.DMatrix(test.data)
+
+param <- list(objective = "binary:logistic")
+xgb.model <- xgboost(param =param,  data = xgb.train.data, nrounds=3)
+
+col_names = colnames(X)
+
+pred.train = predict(xgb.model,X)
+nodes.train = predict(xgb.model,X,predleaf =TRUE)
+trees = xgb.model.dt.tree(col_names, model = xgb.model)
+
+#### The XGBoost Explainer
+explainer = buildExplainer(xgb.model,xgb.train.data, type="binary", base_score = 0.5, n_first_tree = xgb.model$best_ntreelimit - 1)
+pred.breakdown = explainPredictions(xgb.model, explainer, xgb.test.data)
+
+showWaterfall(xgb.model, explainer, xgb.test.data, test.data,  2, type = "binary")
+showWaterfall(xgb.model, explainer, xgb.test.data, test.data,  8, type = "binary")

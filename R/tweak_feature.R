@@ -164,12 +164,8 @@ plot.tweakedPopulation <- function(
   p <- stats %>% 
     ggplot(aes(x=reorder(var, value), y=value)) +
     geom_bar(stat = "identity") +
-<<<<<<< HEAD
-    xlab("") + ylab("mean absolute effort") +
-=======
     xlab("") + 
     ylab("mean absolute effort") +
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
     coord_flip()
   
   if(type == "direction"){
@@ -179,12 +175,8 @@ plot.tweakedPopulation <- function(
       ggplot(aes(x=var, y=value)) +
       geom_hline(yintercept=0, colour = "red", size = 1.5) + 
       geom_boxplot() +
-<<<<<<< HEAD
-      xlab("") + ylab("All direction of tweak") +
-=======
       xlab("") + 
       ylab("All direction of tweak") +
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
       coord_flip()
   }
   
@@ -193,12 +185,8 @@ plot.tweakedPopulation <- function(
     p <- stats %>% 
       ggplot(aes(x=reorder(var, nonZero), y=nonZero)) +
       geom_bar(stat = "identity") +
-<<<<<<< HEAD
-      xlab("") + ylab("non-zerp frequency of feature tweaking") + 
-=======
       xlab("") + 
       ylab("non-zerp frequency of feature tweaking") + 
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
       coord_flip()
   }
   
@@ -208,11 +196,8 @@ plot.tweakedPopulation <- function(
 }
 
 # Plot individual suggestion (direction to modify)
-<<<<<<< HEAD
-plot.suggest <- function(tweaked.X, k = 1, .order = FALSE, .nonzero.only = FALSE){
-=======
 plot.suggest <- function(tweaked.X, k = 1, .ordered = FALSE, .nonzero.only = FALSE){
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
+
   stopifnot(class(tweaked.X) == "tweaked.suggestion")
   tw.diff <- data.frame(tweaked.X$suggest - tweaked.X$original)
   
@@ -227,13 +212,9 @@ plot.suggest <- function(tweaked.X, k = 1, .ordered = FALSE, .nonzero.only = FAL
   p <- p +
     geom_hline(yintercept=0, colour = "red", size = 1.5) + 
     geom_bar(stat = "identity")  +
-<<<<<<< HEAD
-    xlab("") + ylab("directions of tweak") +
-=======
     ggtitle(catf("instance #%i", k)) +
     xlab("") + 
     ylab("directions of tweak") +
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
     coord_flip()
   
   print(p)
