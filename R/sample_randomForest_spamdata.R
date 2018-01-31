@@ -1,23 +1,9 @@
 # feature tweaking: sample usage with spam data set -----------------------
-<<<<<<< HEAD
-for(LIB in c("randomForest", "tidyverse", "magrittr")){
-  if(! require(LIB, character.only = TRUE)){
-    install.packages(LIB, dependencies = TRUE)
-    require(LIB, character.only = TRUE)
-  }
-}
-if(! require(pforeach)){ 
-  install.packages("foreach", dependencies = TRUE)
-  devtools::install_github("hoxo-m/pforeach")
-  require(pforeach)
-}
-=======
 require(tidyverse)
 require(magrittr)
 require(randomForest)
 # devtools::install_github("hoxo-m/pforeach")
 require(pforeach)
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
 
 rm(list=ls())
 source("./R/tweak_feature.R")
@@ -90,21 +76,6 @@ tweaked <- tweak(es.rf, newdata= X.test, label.from = "spam", label.to = "nonspa
                  .dopar = TRUE)
 tweaked %>% str
 
-<<<<<<< HEAD
-dt <- descale.tweakedFeature(tweaked, X.fs)
-
-# Plot population 
-pp <- plot.tweakedPopulation(tweaked, "a")
-pp <- plot.tweakedPopulation(tweaked, "d")
-pp <- plot.tweakedPopulation(tweaked, "f")
-
-which(tweaked$predict == "spam")
-plot.suggest(tweaked, 3)
-plot.suggest(tweaked, 6)
-plot.suggest(tweaked, 7)
-plot.suggest(tweaked, 7, .order = TRUE, .nonzero.only = TRUE)
-
-=======
 dt <- descale.tweakedFeature(tweaked, X.test)
 dt %>% str(1)
 
@@ -120,6 +91,5 @@ plot.suggest(tweaked, 15, .ordered = TRUE, .nonzero.only = TRUE)
 pp <- plot.tweakedPopulation(tweaked, "a")
 pp <- plot.tweakedPopulation(tweaked, "d")
 pp <- plot.tweakedPopulation(tweaked, "f")
->>>>>>> d3a489fd3ca4dc5519a56ee451068c54d0c3dec6
 
 # end ---------------------------------------------------------------------
